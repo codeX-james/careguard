@@ -959,21 +959,23 @@ export class CostcoRxProvider extends BasePricingProvider {
   }
 }
 
+export const PRICING_PROVIDER_CONFIG = [
+  { name: "static", description: "Local fallback pricing database", create: () => new StaticProvider() },
+  { name: "goodrx", description: "GoodRx-style prescription pricing database", create: () => new GoodRxProvider() },
+  { name: "costco", description: "Costco Rx pricing database", create: () => new CostcoRxProvider() },
+] as const;
+
 /**
  * Provider Factory - Creates provider instances based on configuration
  */
 export function createPricingProvider(providerName?: string): PricingProvider {
   const provider = (providerName || process.env.PHARMACY_PRICING_PROVIDER || "static").toLowerCase();
-  
-  switch (provider) {
-    case "goodrx":
-      return new GoodRxProvider();
-    case "costco":
-      return new CostcoRxProvider();
-    case "static":
-      return new StaticProvider();
-    default:
-      logger.warn({ provider }, "unknown pricing provider, falling back to static");
-      return new StaticProvider();
+
+  const registration = PRICING_PROVIDER_CONFIG.find((config) => config.name === provider);
+  if (registration) {
+    return registration.create();
   }
+
+  logger.warn({ provider }, "unknown pricing provider, falling back to static");
+  return new StaticProvider();
 }
