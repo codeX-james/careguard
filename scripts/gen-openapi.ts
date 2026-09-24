@@ -14,6 +14,7 @@ import {
   MAX_FREE_TEXT_LENGTH,
   MAX_FREE_TEXT_LIST_LENGTH,
 } from "../shared/free-text.ts";
+import { ArgParser } from "../shared/cli-args.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const docsDir = path.resolve(__dirname, "../docs");
@@ -742,5 +743,7 @@ export function specToYaml(obj: unknown, indent = 0): string {
 // Only write the file when run directly (`npm run gen-openapi`); importing this
 // module — e.g. from the CI validator — must have no side effects.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const parser = new ArgParser("gen-openapi.ts", "Generate OpenAPI 3.1 spec from zod schemas");
+  parser.parse();
   saveSpec();
 }

@@ -31,9 +31,10 @@ If you use [nvm](https://github.com/nvm-sh/nvm), running `nvm use` in the projec
 
 1. Fork the repo and create a branch from `main`
 2. Make your changes with tests where applicable
-3. Run `npm test` (root) and `cd dashboard && npm test` before pushing
-4. Add an entry to `CHANGELOG.md` if your change is user-facing (new feature, bug fix, API change, or breaking change). Skip this for docs-only edits, internal refactors with no behavior change, and CI/config tweaks with no user-visible effect. Follow the existing Keep-a-Changelog style in `CHANGELOG.md:1`.
-5. Open a pull request — CI must be green before merge
+3. During active development, use `npm run test:changed` to run only tests affected by your changes (faster iteration)
+4. Before pushing, run the full test suite: `npm test` (root) and `cd dashboard && npm test`
+5. Add an entry to `CHANGELOG.md` if your change is user-facing (new feature, bug fix, API change, or breaking change). Skip this for docs-only edits, internal refactors with no behavior change, and CI/config tweaks with no user-visible effect. Follow the existing Keep-a-Changelog style in `CHANGELOG.md:1`.
+6. Open a pull request — CI must be green before merge
 
 When cutting a release, update [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) with the new version row (Node, SDK, and API contract versions). See [docs/release/versioning.md](docs/release/versioning.md) for the full release process.
 
@@ -205,6 +206,22 @@ npm run clear:stale-locks -- --yes
 
 Use `--root=<path>` for a different data directory and
 `--older-than-minutes=<n>` to adjust the stale-lock threshold.
+## Environment Variable Sync
+
+When adding a new environment variable:
+
+1. Add it to `.env.example` with documentation
+2. Run `npm run check:env-sync` to verify `.env.example` and `scripts/check-env-vars.ts` are aligned
+3. Run `npm run check:env-vars` to validate the variable is actually used in the codebase
+
+The `check:env-sync` script is also available as a pre-commit hook (optional); add it to your git hooks configuration:
+
+```bash
+npm run check:env-sync
+```
+
+This prevents `.env.example` drift (new vars in one file but not the other).
+
 ## Troubleshooting
 
 > **First step for any setup or runtime failure:** run `npm run check:env-vars` (which executes `scripts/check-env-vars.ts:65`) to validate that every key in `.env.example` is actually referenced in the codebase and to flag unused or missing vars. Its output (`⚠️  unused variables` / `✅ All environment variables ...`) often points directly at the missing `OZ_FACILITATOR_API_KEY` or `LLM_API_KEY`. See `scripts/check-env-vars.ts:14` for how it parses `.env.example`.

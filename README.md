@@ -162,7 +162,7 @@ For a single-command boot of the full stack — server, dashboard, redis, promet
 # 1. Configure .env (same as above)
 cp .env.example .env
 
-# 2. Start everything
+# 2. Start everything (server + dashboard + redis + monitoring stack)
 docker compose up
 
 # 3. Open the apps
@@ -171,6 +171,22 @@ docker compose up
 #   Prometheus: http://localhost:9090
 #   Grafana:    http://localhost:3030  (admin / admin by default)
 #   Redis:      localhost:6379
+```
+
+#### Backend-only development (skip dashboard/monitoring)
+
+To speed up local development when working only on backend services, start just the server and redis:
+
+```bash
+# Server + redis only (no dashboard, prometheus, or grafana)
+docker compose up --profile=
+```
+
+Or explicitly without monitoring:
+
+```bash
+# Server + redis + dashboard, but skip prometheus/grafana
+docker compose up --profile=full
 ```
 
 The default `docker-compose.yml` builds the production-shape multi-stage images. The auto-loaded `docker-compose.override.yml` swaps the `server` and `dashboard` services for hot-reload dev mode (mounts the source tree, runs `npm run dev`).

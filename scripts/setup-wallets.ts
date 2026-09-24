@@ -15,6 +15,7 @@ import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english";
 import { logger } from "../shared/logger.ts";
 import { getTargetFee } from "../shared/stellar-fee.ts";
 import { fetchWalletBalances } from "../shared/wallet-balance.ts";
+import { ArgParser } from "../shared/cli-args.ts";
 
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const FRIENDBOT_URL = "https://friendbot.stellar.org";
@@ -314,11 +315,29 @@ async function addUsdcTrustline(keypair: Keypair, maxRetries = 1): Promise<void>
 }
 
 async function main() {
-  const writeEnv = process.argv.includes("--write-env");
-  const yes = process.argv.includes("--yes");
-  const seedArg = process.argv
-    .find((arg) => arg.startsWith("--seed="))
-    ?.slice("--seed=".length);
+  const parser = new ArgParser("setup-wallets.ts", "Creates and funds Stellar testnet wallets for CareGuard")
+    .addFlag({
+      name: "write-env",
+      description: "Write derived keys to .env file",
+      type: "boolean",
+    })
+    .addFlag({
+      name: "yes",
+      shorthand: "y",
+      description: "Skip confirmation prompts",
+      type: "boolean",
+    })
+    .addFlag({
+      name: "seed",
+      description: "Seed material (BIP-39 mnemonic or legacy hex)",
+      type: "string",
+    });
+
+  const args = parser.parse();
+  const writeEnv = Boolean(args.flags["write-env"]);
+  const yes = Boolean(args.flags["yes"]);
+  const seedArg = args.flags.seed as string | undefined;
+
   logger.info("CareGuard Wallet Setup starting");
 
   const cwd = process.cwd();
