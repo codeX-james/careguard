@@ -12,6 +12,16 @@ npm run setup   # generates testnet wallets
 
 See [QUICKSTART.md](QUICKSTART.md) for full environment setup.
 
+## Package Manager
+
+**npm is the authoritative package manager for this repository.** Root and
+dashboard CI installs use the corresponding `package-lock.json` files with
+`npm ci`; update those lockfiles with npm when changing dependencies.
+
+The root `pnpm-lock.yaml` and `pnpm-workspace.yaml` are legacy compatibility
+artifacts for older local workflows and are not updated or used as the source
+of truth by CI. New development and dependency changes should use npm.
+
 ## Node.js Version Policy
 
 This project requires **Node.js 22** and will refuse to install on earlier versions.
@@ -35,6 +45,28 @@ If you use [nvm](https://github.com/nvm-sh/nvm), running `nvm use` in the projec
 4. Before pushing, run the full test suite: `npm test` (root) and `cd dashboard && npm test`
 5. Add an entry to `CHANGELOG.md` if your change is user-facing (new feature, bug fix, API change, or breaking change). Skip this for docs-only edits, internal refactors with no behavior change, and CI/config tweaks with no user-visible effect. Follow the existing Keep-a-Changelog style in `CHANGELOG.md:1`.
 6. Open a pull request — CI must be green before merge
+
+### Contributor Checks
+
+Verify the audit log locally with the human-readable check:
+
+```bash
+npx tsx scripts/verify-audit-log.ts
+```
+
+For CI or other automation, use `--json` to emit `{ "ok": boolean, "errors": [...] }`.
+The command exits non-zero when verification fails in either output mode:
+
+```bash
+npx tsx scripts/verify-audit-log.ts --json
+```
+
+When developing a pricing provider, list the registered providers and their
+configuration without making network calls:
+
+```bash
+node --import tsx scripts/test-pricing-providers.ts --list
+```
 
 When cutting a release, update [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) with the new version row (Node, SDK, and API contract versions). See [docs/release/versioning.md](docs/release/versioning.md) for the full release process.
 

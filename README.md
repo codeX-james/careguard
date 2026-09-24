@@ -240,16 +240,16 @@ hosting setup, CI validation, and how the x402 `X-PAYMENT` auth scheme works.
 
 ```bash
 # Install dependencies (if not already done)
-pnpm install
+npm install --legacy-peer-deps
 
 # Run all tests (root backend + dashboard)
-pnpm test
+npm run test:all
 
 # Watch mode
-pnpm test:watch
+npm run test:watch
 
 # Run tests with coverage
-pnpm test -- --coverage
+npm test -- --coverage
 ```
 
 Tests are organized in two workspaces:
@@ -260,6 +260,9 @@ Tests are organized in two workspaces:
 Shared test helpers (environment scrubber, fetch mock, Horizon mock) live in `tests/setup.ts`.
 
 > **Branch protection:** The `main` branch requires the CI check (`ci`) to pass before merging. Ensure all typecheck, lint, and test steps are green on your PR.
+
+For provider development, run `node --import tsx scripts/test-pricing-providers.ts --list`
+to print registered provider names and configuration without making network calls.
 
 ---
 
