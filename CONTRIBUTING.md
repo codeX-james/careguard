@@ -37,6 +37,45 @@ If you use [nvm](https://github.com/nvm-sh/nvm), running `nvm use` in the projec
 
 When cutting a release, update [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) with the new version row (Node, SDK, and API contract versions). See [docs/release/versioning.md](docs/release/versioning.md) for the full release process.
 
+## Test Layout
+
+CareGuard splits tests across two projects configured via [`vitest.workspace.ts`](vitest.workspace.ts). This workspace configuration organizes tests into distinct project boundaries based on execution environment and responsibility.
+
+### Project Boundaries & Glob Patterns
+
+| Project | Config File | Glob Patterns | Environment | Description |
+|---------|-------------|---------------|-------------|-------------|
+| **Root** | [`vitest.config.ts`](vitest.config.ts) | `agent/**/__tests__/**/*.test.{ts,tsx}`<br>`agent/**/evals/**/*.spec.{ts,tsx}`<br>`services/**/__tests__/**/*.test.{ts,tsx}`<br>`shared/**/__tests__/**/*.test.{ts,tsx}`<br>`scripts/**/__tests__/**/*.test.{ts,tsx}`<br>`tests/**/*.test.{ts,tsx}` | `node` | Backend APIs, AI agent logic, shared libraries, and utility scripts |
+| **Dashboard** | [`dashboard/vitest.config.ts`](dashboard/vitest.config.ts) | `dashboard/src/**/*.test.{ts,tsx}`<br>`dashboard/tests/**/*.test.{ts,tsx}` | `jsdom` | Next.js dashboard UI components, hooks, and client-side logic |
+
+### Running Tests
+
+- **Root project tests (`npm test`):** Running `npm test` in the repository root executes tests for the **root project** only (`vitest run`).
+- **All workspace tests (`npm run test:all`):** Running `npm run test:all` executes tests across **both workspace projects** (root + dashboard) via `vitest.workspace.ts`.
+- **Dashboard tests directly (`cd dashboard && npm test`):** Dashboard tests can also be run independently by entering `dashboard/` and running `npm test` or `npx vitest run`, which runs inside `dashboard/` using the `jsdom` environment.
+
+### Running a Single Project or Specific Test File
+
+To execute tests for a single workspace project from the repository root:
+
+```bash
+# Run only root project tests
+npx vitest --project root
+
+# Run only dashboard project tests
+npx vitest --project ./dashboard/vitest.config.ts
+```
+
+To run a single test file:
+
+```bash
+# Target a backend / root test file
+npx vitest agent/__tests__/wallet-balance.test.ts
+
+# Target a dashboard test file
+npx vitest --project ./dashboard/vitest.config.ts dashboard/src/__tests__/stellar-network.test.ts
+```
+
 ## Dependency Management
 
 Dependencies are kept up to date automatically via [Dependabot](.github/dependabot.yml).
