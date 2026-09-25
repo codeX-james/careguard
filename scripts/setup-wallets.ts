@@ -364,11 +364,17 @@ async function main() {
       name: "seed",
       description: "Seed material (BIP-39 mnemonic or legacy hex)",
       type: "string",
+    })
+    .addFlag({
+      name: "resume",
+      description: "Resume from .env — skip wallets whose keys are already populated",
+      type: "boolean",
     });
 
   const args = parser.parse();
   const writeEnv = Boolean(args.flags["write-env"]);
   const yes = Boolean(args.flags["yes"]);
+  const resume = Boolean(args.flags.resume);
   const seedArg = args.flags.seed as string | undefined;
 
   logger.info("CareGuard Wallet Setup starting");
@@ -391,8 +397,28 @@ async function main() {
 
   const wallets = deriveWalletsFromSeed(seed.seed);
 
+  // #1337 — When --resume is passed, read .env to find wallets whose keys are
+  // already populated and skip regenerating/funding/trustlining them.
+  const alreadySetup = new Set<string>();
+  if (resume) {
+    const envPath = path.join(cwd, ".env");
+    if (existsSync(envPath)) {
+      const envContent = readFileSync(envPath, "utf-8");
+      for (const wallet of wallets) {
+        const pubPattern = new RegExp(`^${wallet.name}_PUBLIC_KEY=G[A-Z0-9]{55}$`, "m");
+        if (pubPattern.test(envContent)) {
+          alreadySetup.add(wallet.name);
+          logger.info({ name: wallet.name }, "already set up in .env, skipping (--resume)");
+        }
+      }
+    } else {
+      logger.warn("--resume passed but no .env found, proceeding with full setup");
+    }
+  }
+
   logger.info("step 1: funding accounts via Friendbot");
   for (const wallet of wallets) {
+    if (alreadySetup.has(wallet.name)) continue;
     if (checkpoint.fundedWallets.includes(wallet.publicKey)) {
       logger.info({ name: wallet.name, wallet: wallet.publicKey.slice(0, 8) }, "already funded (from checkpoint)");
       continue;
@@ -410,6 +436,7 @@ async function main() {
 
   logger.info("step 2: adding USDC trustlines");
   for (const wallet of wallets) {
+    if (alreadySetup.has(wallet.name)) continue;
     if (checkpoint.trustedWallets.includes(wallet.publicKey)) {
       logger.info({ name: wallet.name, wallet: wallet.publicKey.slice(0, 8) }, "trustline already added (from checkpoint)");
       continue;
