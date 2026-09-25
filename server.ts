@@ -77,6 +77,7 @@ import {
   concurrentRequestsMiddleware,
 } from "./shared/rate-limit.ts";
 import { agentQueue } from "./shared/agent-queue.ts";
+import { paginateTransactions } from "./shared/transaction-pagination.ts";
 
 // Agent tools
 import {
@@ -1026,33 +1027,13 @@ app.get("/agent/spending", (_req, res) => {
   res.json(getSpendingSummary());
 });
 app.get("/agent/transactions", (req, res) => {
-  const parsedLimit = parseInt(req.query.limit as string, 10);
-  const limit = Number.isFinite(parsedLimit) ? parsedLimit : 25;
-  const parsedOffset = parseInt(req.query.offset as string, 10);
-  const offset = Number.isFinite(parsedOffset) ? parsedOffset : 0;
   const tracker = getSpendingTracker();
-  const totalTransactions = tracker.transactions.length;
-  // Compute clamped indices explicitly rather than relying on slice()'s
-  // negative-index handling, which treats -0 (e.g. offset=0, limit=0) as
-  // literal index 0 instead of "end of array" and silently returns
-  // everything instead of nothing.
-  const end = Math.max(totalTransactions - offset, 0);
-  const start = Math.max(end - limit, 0);
-  const paginatedTransactions = tracker.transactions
-    .slice(start, end)
-    .reverse();
-
-  res.json({
-    ...tracker,
-    transactions: paginatedTransactions,
-    pagination: {
-      total: totalTransactions,
-      limit,
-      offset,
-      hasMore: offset + limit < totalTransactions,
-      hasPrevious: offset > 0,
-    },
-  });
+  const { transactions, pagination } = paginateTransactions(
+    tracker.transactions,
+    req.query.limit,
+    req.query.offset,
+  );
+  res.json({ ...tracker, transactions, pagination });
 });
 app.post("/agent/policy", (req, res) => {
   const result = SpendingPolicySchema.safeParse(req.body);
