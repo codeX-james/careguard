@@ -41,13 +41,18 @@ export function validateTask(raw: unknown): TaskValidationResult {
 
   const stripped = parsed.data;
 
-  try {
-    const asJson = JSON.parse(stripped);
-    if (asJson && typeof asJson === "object" && "role" in asJson) {
-      return { ok: false, error: "Task contains disallowed content", suspicious: true };
+  // Only a JSON object can carry a "role" key, so skip the parse (and the
+  // exception it throws for every normal task) unless the task looks like one.
+  // This was most of validateTask's cost per call (#1312).
+  if (stripped.trimStart().startsWith("{")) {
+    try {
+      const asJson = JSON.parse(stripped);
+      if (asJson && typeof asJson === "object" && "role" in asJson) {
+        return { ok: false, error: "Task contains disallowed content", suspicious: true };
+      }
+    } catch {
+      // Not valid JSON — treat as a normal task string
     }
-  } catch {
-    // Expected — normal task strings are not JSON
   }
 
   const lower = stripped.toLowerCase();
