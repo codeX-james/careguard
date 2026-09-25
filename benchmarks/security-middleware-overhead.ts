@@ -26,10 +26,12 @@
  *   output goes to /dev/null.
  *
  * Run: node --import tsx benchmarks/security-middleware-overhead.ts
+ *      MODE=isolated ISO_ITERATIONS=50000 node --import tsx benchmarks/security-middleware-overhead.ts
  *      REQUESTS=5000 CONCURRENCY=1,10,50 ROUNDS=3 node --import tsx benchmarks/security-middleware-overhead.ts
  */
 
 import http from "node:http";
+import net from "node:net";
 import { fork, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
@@ -54,41 +56,47 @@ const CONCURRENCY = (process.env.CONCURRENCY ?? "1,10,50")
   .map(Number);
 // Each cell is measured ROUNDS times; the round with the median mean latency is reported.
 const ROUNDS = Number(process.env.ROUNDS ?? 3);
+// MODE=http | isolated | both (default)
+const MODE = process.env.MODE ?? "both";
+const ISO_ITERATIONS = Number(process.env.ISO_ITERATIONS ?? 20_000);
 
 // ─── Server side (child process) ─────────────────────────────────────────────
 
-async function serve(stage: Stage): Promise<void> {
+type Layer = Exclude<Stage, "baseline">;
+
+/** Build an express app with the given layers, applied in server.ts order. */
+async function buildApp(layers: Layer[]) {
   const { default: express } = await import("express");
-  const level = STAGES.indexOf(stage);
+  const has = (l: Layer) => layers.includes(l);
   const app = express();
 
-  if (level >= 1) {
+  if (has("rate-limit")) {
     const { createRateLimiter } = await import("../shared/rate-limit.ts");
     app.use("/agent", createRateLimiter("agent", 1e9));
     app.use(createRateLimiter("default", 1e9));
   }
-  if (level >= 2) {
+  if (has("helmet")) {
     const { applySecurityMiddleware } =
       await import("../shared/security-middleware.ts");
     applySecurityMiddleware(app);
   }
-  if (level >= 3) {
+  if (has("cors")) {
     const { createCorsMiddleware } = await import("../shared/cors.ts");
     app.use(createCorsMiddleware());
   }
-  if (level >= 4) {
+  if (has("json")) {
     const small = express.json({ limit: "20kb" });
     const large = express.json({ limit: "256kb" });
     app.use((req, res, next) =>
       (req.path.startsWith("/bill/audit") ? large : small)(req, res, next),
     );
   }
-  if (level >= 5) {
+  if (has("lifecycle")) {
     const { requestLifecycleMiddleware } =
       await import("../shared/request-lifecycle.ts");
     app.use(requestLifecycleMiddleware());
   }
-  if (level >= 6) {
+  if (has("api-key")) {
     const { requireApiKey } = await import("../shared/auth.ts");
     app.use("/agent", requireApiKey);
   }
@@ -103,6 +111,12 @@ async function serve(stage: Stage): Promise<void> {
     });
   });
 
+  return app;
+}
+
+async function serve(stage: Stage): Promise<void> {
+  const layers = STAGES.slice(1, STAGES.indexOf(stage) + 1) as Layer[];
+  const app = await buildApp(layers);
   const server = app.listen(0, "127.0.0.1", () => {
     process.send!({ port: (server.address() as AddressInfo).port });
   });
@@ -142,6 +156,82 @@ interface Result {
 
 function percentile(sorted: number[], p: number): number {
   return sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)]!;
+}
+
+// ─── Isolated per-middleware cost (child process) ────────────────────────────
+//
+// HTTP round-trips on a shared dev machine are noisy at the sub-0.1 ms level,
+// so each layer is also measured on its own, in-process: an express app with
+// just that layer (plus the route) is invoked directly with an unconnected
+// IncomingMessage/ServerResponse pair, timing until the handler calls
+// res.end(). This isolates the middleware's own CPU cost from socket I/O.
+
+function invoke(
+  app: (req: http.IncomingMessage, res: http.ServerResponse) => void,
+  t: Target,
+): Promise<number> {
+  return new Promise((resolve) => {
+    const sock = new net.Socket();
+    Object.defineProperty(sock, "remoteAddress", { value: "127.0.0.1" });
+    const req = new http.IncomingMessage(sock);
+    req.method = t.method;
+    req.url = t.path;
+    req.headers = {
+      host: "127.0.0.1",
+      origin: "http://localhost:3000",
+      authorization: `Bearer ${API_KEY}`,
+    };
+    if (t.body) {
+      req.headers["content-type"] = "application/json";
+      req.headers["content-length"] = String(Buffer.byteLength(t.body));
+      req.push(t.body);
+    }
+    req.push(null);
+    const res = new http.ServerResponse(req);
+    const t0 = performance.now();
+    (res as any).end = function () {
+      const dt = performance.now() - t0;
+      // Fire listeners (request-lifecycle logs on "finish") like a real response.
+      res.emit("finish");
+      resolve(dt);
+      return this;
+    };
+    app(req, res);
+  });
+}
+
+async function isolated(): Promise<void> {
+  const cases: { name: string; layers: Layer[] }[] = [
+    { name: "baseline", layers: [] },
+    ...(STAGES.slice(1) as Layer[]).map((l) => ({ name: l, layers: [l] })),
+    { name: "full chain", layers: STAGES.slice(1) as Layer[] },
+  ];
+  const us = (ms: number) => (ms * 1000).toFixed(1);
+
+  console.error(
+    `\nIsolated per-middleware cost — ${ISO_ITERATIONS} in-process invocations per cell (µs)\n`,
+  );
+  for (const t of TARGETS) {
+    console.error(t.name);
+    console.error(
+      "| layer | mean µs | p50 µs | p99 µs | Δ mean vs baseline (µs) |",
+    );
+    console.error("|---|---:|---:|---:|---:|");
+    let baseMean = 0;
+    for (const c of cases) {
+      const app = (await buildApp(c.layers)) as any;
+      for (let i = 0; i < 2000; i++) await invoke(app, t);
+      const xs: number[] = [];
+      for (let i = 0; i < ISO_ITERATIONS; i++) xs.push(await invoke(app, t));
+      xs.sort((a, b) => a - b);
+      const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+      if (c.name === "baseline") baseMean = mean;
+      console.error(
+        `| ${c.name} | ${us(mean)} | ${us(percentile(xs, 50))} | ${us(percentile(xs, 99))} | ${c.name === "baseline" ? "—" : us(mean - baseMean)} |`,
+      );
+    }
+    console.error();
+  }
 }
 
 function request(agent: http.Agent, port: number, t: Target): Promise<void> {
@@ -223,7 +313,30 @@ function startServer(
   });
 }
 
+function runIsolatedChild(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = fork(fileURLToPath(import.meta.url), ["--isolated"], {
+      execArgv: ["--import", "tsx"],
+      // Keep production logging on (request-lifecycle writes a pino line per
+      // request) but discard it; the results table is printed to stderr.
+      stdio: ["ignore", "ignore", "inherit", "ipc"],
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        AGENT_API_KEY: API_KEY,
+        DASHBOARD_ORIGIN: "http://localhost:3000",
+      },
+    });
+    child.once("error", reject);
+    child.once("exit", (code) =>
+      code ? reject(new Error(`isolated run exited with ${code}`)) : resolve(),
+    );
+  });
+}
+
 async function main(): Promise<void> {
+  if (MODE !== "http") await runIsolatedChild();
+  if (MODE === "isolated") return;
   const results: Result[] = [];
 
   for (const stage of STAGES) {
@@ -282,7 +395,9 @@ async function main(): Promise<void> {
 }
 
 const serveIdx = process.argv.indexOf("--serve");
-if (serveIdx !== -1) {
+if (process.argv.includes("--isolated")) {
+  await isolated();
+} else if (serveIdx !== -1) {
   await serve(process.argv[serveIdx + 1] as Stage);
 } else {
   await main();
