@@ -35,6 +35,8 @@ This project requires **Node.js 22** and will refuse to install on earlier versi
 
 If you use [nvm](https://github.com/nvm-sh/nvm), running `nvm use` in the project root will activate the correct version automatically.
 
+To reproduce a production-only bug locally, see [docs/RENDER-LOCAL-PARITY.md](docs/RENDER-LOCAL-PARITY.md) for a full mapping of `render.yaml` settings to their `.env` equivalents.
+
 **Why Node 22?** The server and agent entry-points use `--experimental-strip-types` and `--experimental-transform-types`, which reached stable shape in Node 22. Running on Node 20 will fail silently in some code paths and loudly in others.
 
 ## Development Workflow
@@ -67,6 +69,18 @@ configuration without making network calls:
 ```bash
 node --import tsx scripts/test-pricing-providers.ts --list
 ```
+
+To inspect the local pharmacy pricing SQLite DB (pharmacies, drugs, and prices):
+
+```bash
+# Full summary
+npm run inspect:pharmacy-db
+
+# Filter to a single drug
+npm run inspect:pharmacy-db -- --drug lisinopril
+```
+
+See [services/pharmacy-api/README.md](services/pharmacy-api/README.md) for schema details and how to update prices.
 
 When cutting a release, update [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) with the new version row (Node, SDK, and API contract versions). See [docs/release/versioning.md](docs/release/versioning.md) for the full release process.
 

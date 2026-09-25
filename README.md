@@ -218,6 +218,13 @@ docker compose -f docker-compose.yml up
 To tear everything down (including volumes — drops the spending log, redis data, grafana dashboards):
 
 ```bash
+# Safer wrapper — shows what will be deleted and prompts for confirmation
+npm run docker:down:clean
+
+# Skip the prompt in CI or scripted use
+npm run docker:down:clean -- --yes
+
+# Raw command (no confirmation — use with care)
 docker compose down -v
 ```
 
