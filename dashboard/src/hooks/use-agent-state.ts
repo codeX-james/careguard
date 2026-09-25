@@ -21,6 +21,8 @@ import { usePoll } from './use-poll';
 import { AGENT_URL } from '../lib/agent-url';
 import { agentFetch } from '../lib/agent-fetch';
 
+/** Matches MAX_TRANSACTIONS_LIMIT in shared/transaction-pagination.ts (#1302). */
+const TRANSACTION_HISTORY_PAGE_SIZE = 500;
 
 const DEFAULT_POLICY = {
   dailyLimit: 100,
@@ -292,24 +294,28 @@ export function useAgentState({ activeTab }: UseAgentStateOptions) {
 
   // `allTransactions` only ever holds the page currently in view, because
   // fetchTransactions replaces it on every page change. Exports that need the
-  // whole history fetch it on demand here: one request at offset 0 with a limit
-  // wide enough to cover pagination.total. No component state is touched, so the
-  // visible page is unaffected.
+  // whole history fetch it on demand here, walking pages of
+  // TRANSACTION_HISTORY_PAGE_SIZE until the server reports no more — the server
+  // caps a single page at that size (#1302). No component state is touched, so
+  // the visible page is unaffected.
   const fetchTransactionHistory = useCallback(async (): Promise<Transaction[]> => {
-    const total = pagination?.total ?? allTransactions.length;
-    const params = new URLSearchParams({
-      limit: String(Math.max(total, 1)),
-      offset: '0',
-    });
-    const res = await agentFetch(`${AGENT_URL}/agent/transactions?${params}`);
-    if (!res.ok) throw new Error(`Transactions returned ${res.status}`);
-    const data = await res.json();
-    return Array.isArray(data.transactions)
-      ? data.transactions
-          .map((t: unknown) => TransactionSchema.parse(t))
-          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      : [];
-  }, [pagination, allTransactions.length]);
+    const collected: Transaction[] = [];
+    for (let offset = 0; ; offset += TRANSACTION_HISTORY_PAGE_SIZE) {
+      const params = new URLSearchParams({
+        limit: String(TRANSACTION_HISTORY_PAGE_SIZE),
+        offset: String(offset),
+      });
+      const res = await agentFetch(`${AGENT_URL}/agent/transactions?${params}`);
+      if (!res.ok) throw new Error(`Transactions returned ${res.status}`);
+      const data = await res.json();
+      const page = Array.isArray(data.transactions) ? data.transactions : [];
+      for (const t of page) collected.push(TransactionSchema.parse(t));
+      if (!data.pagination?.hasMore || page.length === 0) break;
+    }
+    return collected.sort(
+      (a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, []);
 
   // SSE: server pushes spending/transactions/status on state change (#274).
   // Falls back to polling when SSE is unavailable (old proxies, browsers without EventSource).
