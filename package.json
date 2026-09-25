@@ -42,6 +42,7 @@
     "benchmark:investigations": "node --import tsx scripts/benchmark-investigations.ts",
     "benchmark:validation": "node --import tsx benchmarks/task-validation.ts",
     "benchmark:transactions": "node --import tsx benchmarks/agent-transactions.ts",
+    "benchmark:security-middleware": "node --import tsx benchmarks/security-middleware-overhead.ts",
     "seed:recipients": "node --import tsx scripts/seed-recipients.ts",
     "seed:orders": "node --import tsx scripts/seed-orders.ts",
     "seed:adherence": "node --import tsx scripts/seed-adherence.ts",
