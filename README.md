@@ -173,6 +173,24 @@ docker compose up
 #   Redis:      localhost:6379
 ```
 
+### Seed data scripts
+
+Use these scripts to populate `data/` with synthetic test data for dashboard development:
+
+```bash
+# Generate synthetic care recipients (default: 5)
+npm run seed:recipients -- --count 10
+
+# Generate pharmacy order history (default: 20, add --include-blocked for over-budget orders)
+npm run seed:orders -- --count 50 --include-blocked
+
+# Generate medication adherence records for a specific recipient
+npm run seed:adherence -- --recipient rosa_garcia --days 30
+
+# Reset data/ to a clean state (prompts unless --yes is passed)
+npm run reset:data -- --yes
+```
+
 #### Backend-only development (skip dashboard/monitoring)
 
 To speed up local development when working only on backend services, start just the server and redis:
