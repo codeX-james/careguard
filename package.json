@@ -40,6 +40,7 @@
     "generate:sample-bill": "node --import tsx scripts/generate-sample-bill.ts",
     "clear:stale-locks": "node --import tsx scripts/clear-stale-locks.ts",
     "benchmark:investigations": "node --import tsx scripts/benchmark-investigations.ts",
+    "benchmark:investigations:1319-1322": "node --import tsx benchmarks/investigation-1319-1322.ts",
     "benchmark:transactions": "node --import tsx benchmarks/agent-transactions.ts",
     "seed:recipients": "node --import tsx scripts/seed-recipients.ts",
     "seed:orders": "node --import tsx scripts/seed-orders.ts",
