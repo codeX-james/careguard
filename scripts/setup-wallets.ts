@@ -7,7 +7,7 @@
 
 import { Keypair, Networks, TransactionBuilder, Operation, Asset, Horizon } from "@stellar/stellar-sdk";
 import { createHash, createHmac } from "crypto";
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, statSync } from "fs";
 import path from "path";
 import { pathToFileURL } from "url";
 import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from "@scure/bip39";
@@ -146,6 +146,7 @@ export async function resolveSetupSeed(options: {
   const cwd = options.cwd || process.cwd();
   const seedPath = path.join(cwd, DEV_SEED_FILE);
   if (existsSync(seedPath)) {
+    warnIfInsecurePermissions(seedPath);
     return {
       seed: readFileSync(seedPath, "utf-8").trim(),
       source: "file",
@@ -163,7 +164,34 @@ export async function resolveSetupSeed(options: {
 
   const seed = generateMnemonic(englishWordlist, GENERATED_MNEMONIC_STRENGTH);
   writeFileSync(seedPath, `${seed}\n`, { mode: 0o600 });
+  warnIfInsecurePermissions(seedPath);
   return { seed, source: "generated", path: seedPath };
+}
+
+/**
+ * Warns to stderr if the .dev-seed file is world- or group-readable, which
+ * matters because it can deterministically regenerate all local wallet keys.
+ * Skips gracefully on Windows where POSIX file modes don't apply.
+ */
+export function warnIfInsecurePermissions(filePath: string): void {
+  if (process.platform === "win32") return;
+
+  try {
+    const stats = statSync(filePath);
+    // POSIX mode & 0o077 — if any of owner-write, group, or other bits
+    // beyond 0o600 are set, the file is overly permissive.
+    const mode = stats.mode;
+    if ((mode & 0o077) !== 0) {
+      const currentOctal = "0" + (mode & 0o777).toString(8);
+      console.error(
+        `  ⚠ WARNING: ${filePath} has permissions ${currentOctal} (should be 0600).\n` +
+        `    This file can regenerate all local wallet keys. Fix with:\n` +
+        `      chmod 600 ${filePath}`
+      );
+    }
+  } catch {
+    // File might not exist yet or stat failed — nothing to warn about.
+  }
 }
 
 const MAX_FRIENDBOT_RETRIES = 5;
@@ -204,9 +232,9 @@ export async function fundAccountWithRetry(
           lastError = new Error(`Friendbot ${status}: ${text}`);
           if (attempt < MAX_FRIENDBOT_RETRIES - 1) {
             const delayMs = FRIENDBOT_RETRY_BASE_MS * Math.pow(2, attempt);
-            logger.warn(
-              { wallet: publicKey.slice(0, 8), attempt: attempt + 1, delayMs },
-              "transient Friendbot error, retrying"
+            console.log(
+              `  ⏳ Friendbot retry ${attempt + 1}/${MAX_FRIENDBOT_RETRIES} for ${publicKey.slice(0, 8)}… ` +
+              `waiting ${delayMs}ms before next attempt (HTTP ${status})`
             );
             await new Promise((resolve) => setTimeout(resolve, delayMs));
             continue;
@@ -223,9 +251,9 @@ export async function fundAccountWithRetry(
         lastError = err;
         if (attempt < MAX_FRIENDBOT_RETRIES - 1) {
           const delayMs = FRIENDBOT_RETRY_BASE_MS * Math.pow(2, attempt);
-          logger.warn(
-            { wallet: publicKey.slice(0, 8), attempt: attempt + 1, error: msg, delayMs },
-            "network error, retrying"
+          console.log(
+            `  ⏳ Friendbot retry ${attempt + 1}/${MAX_FRIENDBOT_RETRIES} for ${publicKey.slice(0, 8)}… ` +
+            `waiting ${delayMs}ms before next attempt (${msg})`
           );
           await new Promise((resolve) => setTimeout(resolve, delayMs));
           continue;
@@ -235,6 +263,11 @@ export async function fundAccountWithRetry(
     }
   }
 
+  const walletName = publicKey.slice(0, 8);
+  console.error(
+    `  ✗ Failed to fund wallet ${walletName} after ${MAX_FRIENDBOT_RETRIES} attempts. ` +
+    `Last error: ${lastError?.message ?? "unknown"}`
+  );
   throw lastError || new Error(`Failed to fund ${publicKey} after ${MAX_FRIENDBOT_RETRIES} attempts`);
 }
 
