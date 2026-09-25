@@ -8,6 +8,7 @@
  *
  * Usage:
  *   npx tsx scripts/rotate-agent-wallet.ts           # dry run (safe, no txs)
+ *   npx tsx scripts/rotate-agent-wallet.ts --dry-run  # explicit dry run (safe, no txs)
  *   npx tsx scripts/rotate-agent-wallet.ts --execute  # broadcast on STELLAR_NETWORK
  *
  * After --execute: update AGENT_SECRET_KEY + AGENT_PUBLIC_KEY in your env, then restart.
@@ -22,8 +23,10 @@ import {
   Operation,
   Asset,
 } from "@stellar/stellar-sdk";
+import { fetchWalletBalances } from "../shared/wallet-balance.ts";
 
 const EXECUTE = process.argv.includes("--execute");
+const DRY_RUN = process.argv.includes("--dry-run") || !EXECUTE;
 const NETWORK = process.env.STELLAR_NETWORK === "public" ? "public" : "testnet";
 const HORIZON_URL =
   NETWORK === "public"
@@ -80,8 +83,18 @@ async function main() {
     process.exit(1);
   }
 
-  if (!EXECUTE) {
-    console.log("DRY RUN — no transactions broadcast. Re-run with --execute to proceed.");
+  if (DRY_RUN) {
+    console.log("--- DRY RUN PLAN ---");
+    console.log(`  1. createAccount: new wallet ${newKeypair.publicKey().slice(0, 12)}… with ${xlmToSend.toFixed(7)} XLM`);
+    if (usdcAvailable > 0) {
+      console.log(`  2. changeTrust: establish USDC trustline on new wallet`);
+      console.log(`  3. payment: sweep ${usdcAvailable} USDC to new wallet`);
+    } else {
+      console.log(`  2. (no USDC to sweep — trustline and transfer skipped)`);
+    }
+    console.log(`  4. Print updated env vars for AGENT_SECRET_KEY + AGENT_PUBLIC_KEY`);
+    console.log("--- END DRY RUN ---\n");
+    console.log("Re-run with --execute to broadcast these transactions.");
     printUpdateInstructions(newKeypair);
     return;
   }

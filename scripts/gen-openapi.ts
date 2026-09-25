@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, watch } from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import {
@@ -743,7 +743,36 @@ export function specToYaml(obj: unknown, indent = 0): string {
 // Only write the file when run directly (`npm run gen-openapi`); importing this
 // module — e.g. from the CI validator — must have no side effects.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const parser = new ArgParser("gen-openapi.ts", "Generate OpenAPI 3.1 spec from zod schemas");
-  parser.parse();
+  const parser = new ArgParser("gen-openapi.ts", "Generate OpenAPI 3.1 spec from zod schemas")
+    .addFlag({
+      name: "watch",
+      description: "Re-generate the spec on file changes",
+      type: "boolean",
+    });
+  const args = parser.parse();
+  const watchMode = Boolean(args.flags.watch);
+
   saveSpec();
+
+  if (watchMode) {
+    const watchDirs = [
+      path.resolve(__dirname, "../services"),
+      path.resolve(__dirname, "../agent"),
+    ];
+    console.log(`\n👀 Watching for changes in ${watchDirs.join(", ")}…`);
+
+    for (const dir of watchDirs) {
+      watch(dir, { recursive: true }, (eventType, filename) => {
+        if (filename && (filename.endsWith(".ts") || filename.endsWith(".js"))) {
+          const timestamp = new Date().toISOString();
+          console.log(`[${timestamp}] Change detected in ${filename} — regenerating spec…`);
+          try {
+            saveSpec();
+          } catch (err: any) {
+            console.error(`[${timestamp}] Regeneration failed: ${err?.message ?? err}`);
+          }
+        }
+      });
+    }
+  }
 }

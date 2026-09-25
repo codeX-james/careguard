@@ -20,6 +20,7 @@
     "typecheck": "tsc -b",
     "build": "tsc -p tsconfig.build.json",
     "gen-openapi": "node --import tsx scripts/gen-openapi.ts",
+    "gen-openapi:watch": "node --import tsx scripts/gen-openapi.ts --watch",
     "validate:openapi": "node --import tsx scripts/validate-openapi.ts",
     "test": "vitest run",
     "test:changed": "vitest run --changed",
