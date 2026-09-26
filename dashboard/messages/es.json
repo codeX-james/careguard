@@ -68,6 +68,8 @@
     "lineItems": "líneas",
     "showErrors": "Mostrar solo errores",
     "showAll": "Mostrar todo",
+    "sortByOvercharge": "Ordenar por sobrecargo",
+    "sortDefault": "Orden predeterminado",
     "notAudited": "No hay facturas auditadas. Ejecute \"Auditar Factura\" desde Resumen."
   },
   "policy": {
@@ -111,7 +113,8 @@
     "networkStellar": "Stellar Testnet",
     "viewExplorer": "Ver en Stellar Explorer",
     "fund": "Recargar con USDC",
-    "howPayments": "Cómo Funcionan los Pagos"
+    "howPayments": "Cómo Funcionan los Pagos",
+    "balanceUnavailable": "No se pudo cargar el saldo. Verifique su conexión o que la billetera del agente esté configurada, luego intente de nuevo."
   },
   "settings": {
     "recipient": "Paciente",

@@ -68,6 +68,8 @@
     "lineItems": "line items",
     "showErrors": "Show errors only",
     "showAll": "Show all items",
+    "sortByOvercharge": "Sort by overcharge",
+    "sortDefault": "Default order",
     "notAudited": "No bills audited yet. Run \"Audit Hospital Bill\" from Overview."
   },
   "policy": {
@@ -111,7 +113,8 @@
     "networkStellar": "Stellar Testnet",
     "viewExplorer": "View on Stellar Explorer",
     "fund": "Fund with USDC",
-    "howPayments": "How Payments Work"
+    "howPayments": "How Payments Work",
+    "balanceUnavailable": "Couldn't load balance. Check your connection or that the agent wallet is set up, then try again."
   },
   "settings": {
     "recipient": "Care Recipient",
