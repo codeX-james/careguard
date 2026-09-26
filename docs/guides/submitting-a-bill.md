@@ -53,6 +53,8 @@ Once a bill is submitted, CareGuard automatically audits every line item in real
 
 ## Understanding Your Audit Results
 
+For plain-language definitions, examples, and suggested next steps for each finding label, see [Bill Audit Findings Explained](bill-audit-findings-explained.md).
+
 After processing completes, the **Bills** tab displays a comprehensive summary:
 
 - **Total Charged**: The original total dollar amount billed by the hospital.

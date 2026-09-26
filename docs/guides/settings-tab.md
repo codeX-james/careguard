@@ -154,6 +154,8 @@ If copying fails — some browsers block it — a small message appears with the
 
 The CareGuard dashboard is available in **English (`en`)** and **Spanish (`es`)**. English is used unless you ask for Spanish.
 
+For the full language list, switching steps, and current translation coverage, see [Dashboard Language Support](language-support.md).
+
 ### How to switch
 
 The language is part of the dashboard's web address. Add `locale=es` to the end of it:
