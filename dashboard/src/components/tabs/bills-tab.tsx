@@ -144,6 +144,22 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
                   </span>
                 </div>
               </div>
+              {/* #1255: the recommendation is the actionable takeaway — give
+                  it top billing in an advisory callout, detail below. */}
+              {tc.result.recommendation?.trim() ? (
+                <div
+                  role="note"
+                  aria-label="Audit recommendation"
+                  className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4"
+                >
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1">
+                    Recommendation
+                  </p>
+                  <p className="text-sm font-medium text-amber-900 break-words">
+                    {tc.result.recommendation}
+                  </p>
+                </div>
+              ) : null}
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div className="bg-slate-50 rounded-lg p-3 text-center">
                   <div className="text-lg font-bold">${tc.result.totalCharged}</div>
@@ -184,9 +200,6 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
                 </div>
               </div>
               <BillLineItemsVirtualized lineItems={sortedLineItems} />
-              <p className="mt-4 text-sm font-medium text-slate-700">
-                {tc.result.recommendation}
-              </p>
             </div>
           );
         })

@@ -1,12 +1,32 @@
 /**
- * React tests for BillsTab line-item sort control (Issue #1274).
+ * React tests for BillsTab — line-item sort control (Issue #1274),
+ * recommendation callout (Issue #1255) and dispute-generation feedback
+ * (Issue #1256).
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { BillsTab } from "../components/tabs/bills-tab";
 import type { AgentResult } from "../components/types";
 import type { RecipientProfile, SpendingData } from "../lib/types";
+
+const { toastSuccess, downloadDisputeLetterPDF, downloadBillAuditPDF, downloadDisputeLetterEmail } = vi.hoisted(() => ({
+  toastSuccess: vi.fn(),
+  downloadDisputeLetterPDF: vi.fn(),
+  downloadBillAuditPDF: vi.fn(),
+  downloadDisputeLetterEmail: vi.fn(),
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: toastSuccess, error: vi.fn() },
+}));
+
+vi.mock("../app/pdf", () => ({
+  downloadBillAuditPDF,
+  downloadDisputeLetterPDF,
+  downloadDisputeLetterEmail,
+}));
+
 
 const recipient: RecipientProfile = { name: "Rosa" };
 
@@ -115,5 +135,47 @@ describe("BillsTab — line item sort control (Issue #1274)", () => {
       "Large overcharge",
       "Valid line",
     ]);
+  });
+});
+
+describe("BillsTab — recommendation callout (Issue #1255)", () => {
+  it("renders the recommendation in a prioritized callout above the metrics", () => {
+    render(<BillsTab agentResult={buildAgentResult()} recipient={recipient} />);
+
+    const callout = screen.getByRole("note", { name: /audit recommendation/i });
+    expect(callout).toBeInTheDocument();
+    expect(callout.textContent).toContain("Dispute the flagged items.");
+
+    // The callout sits before the metric tiles in the card.
+    const totalChargedTile = screen.getByText("Total Charged");
+    expect(callout.compareDocumentPosition(totalChargedTile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("keeps the line items table below the recommendation", () => {
+    render(<BillsTab agentResult={buildAgentResult()} recipient={recipient} />);
+
+    const callout = screen.getByRole("note", { name: /audit recommendation/i });
+    const firstLineItem = screen.getAllByTestId("line-item")[0]!;
+    expect(callout.compareDocumentPosition(firstLineItem) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("renders nothing for the callout when the recommendation is empty", () => {
+    const result = buildAgentResult();
+    result.toolCalls[0]!.result.recommendation = "";
+    render(<BillsTab agentResult={result} recipient={recipient} />);
+
+    expect(screen.queryByRole("note", { name: /audit recommendation/i })).not.toBeInTheDocument();
+    // The rest of the card still renders.
+    expect(screen.getAllByTestId("line-item").length).toBeGreaterThan(0);
+  });
+
+  it("renders very long recommendation text without truncation", () => {
+    const result = buildAgentResult();
+    const longText = "Dispute ".repeat(200) + "the flagged items.";
+    result.toolCalls[0]!.result.recommendation = longText;
+    render(<BillsTab agentResult={result} recipient={recipient} />);
+
+    const callout = screen.getByRole("note", { name: /audit recommendation/i });
+    expect(callout.textContent).toContain(longText);
   });
 });
