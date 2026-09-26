@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { RecipientProfile } from "../lib/types";
 import type { AgentInfo } from "./types";
 import { EXPLORER_ACCOUNT_URL } from "../lib/stellar-network";
+import { Skeleton } from "./ui/skeleton";
 import { getTranslations, type Locale } from "../i18n";
 
 export interface RecipientOption {
@@ -137,18 +138,27 @@ export function DashboardHeader({
           )}
         </div>
         <div className="flex items-center gap-4">
-          {walletBalance && agentInfo?.agentWallet && (
+          {/* Issue #1258: always reserve the wallet block's space — render a
+              skeleton placeholder while the balance loads or is unavailable
+              instead of removing the block (which caused layout shift). */}
+          {walletBalance && agentInfo?.agentWallet ? (
             <a
               href={`${EXPLORER_ACCOUNT_URL}/${agentInfo.agentWallet}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-right group"
+              data-testid="wallet-balance-link"
             >
               <div className="text-xs text-slate-500">{t.wallet.agentWallet}</div>
               <div className="font-semibold text-sm group-hover:text-sky-600">
                 ${walletBalance}
               </div>
             </a>
+          ) : (
+            <div className="text-right" data-testid="wallet-balance-placeholder">
+              <div className="text-xs text-slate-500">{t.wallet.agentWallet}</div>
+              <Skeleton className="h-5 w-12 ml-auto" />
+            </div>
           )}
           <div className="h-6 w-px bg-slate-200" />
           <div className="flex items-center gap-2">
