@@ -39,6 +39,10 @@
     "medications": "Medicamentos",
     "medicalBills": "Facturas Médicas"
   },
+  "policyPreview": {
+    "title": "Vista previa del presupuesto",
+    "unsaved": "Sin guardar"
+  },
   "tasks": {
     "comparePrices": "Comparar Precios de Medicamentos",
     "findCheapest": "Encontrar farmacias más económicas para los 4 medicamentos de Rosa",

@@ -39,6 +39,10 @@
     "medications": "Medications",
     "medicalBills": "Medical Bills"
   },
+  "policyPreview": {
+    "title": "Budget Preview",
+    "unsaved": "Unsaved"
+  },
   "tasks": {
     "comparePrices": "Compare Medication Prices",
     "findCheapest": "Find cheapest pharmacies for Rosa's 4 medications",
