@@ -103,12 +103,13 @@ export function useAgentState({ activeTab }: UseAgentStateOptions) {
     } catch {}
   }, []);
 
+  // Issue #1259: poll regardless of the active tab so the Approvals nav badge
+  // reflects pending items from anywhere in the dashboard.
   useEffect(() => {
-    if (activeTab !== 'approvals') return;
     void fetchApprovals();
     const interval = setInterval(fetchApprovals, 5000);
     return () => clearInterval(interval);
-  }, [activeTab, fetchApprovals]);
+  }, [fetchApprovals]);
 
   const updateApproval = useCallback(async (txId: string, approve: boolean) => {
     setApprovalsLoading(true);
