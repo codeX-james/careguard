@@ -116,6 +116,7 @@ export default function Dashboard() {
             agentPaused={state.agentPaused}
             loading={state.loading}
             activeTask={state.activeTask}
+            activeTool={state.activeTool}
             onRunTask={state.runAgentTask}
             onCancelTask={state.cancelAgentTask}
             recipient={recipient}

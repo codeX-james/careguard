@@ -16,6 +16,8 @@ export interface OverviewTabProps {
   agentPaused: boolean;
   loading: boolean;
   activeTask: string;
+  /** Tool currently executing inside the running task, when known (#1253). */
+  activeTool?: string | null;
   onRunTask: (task: string, label: string) => void;
   onCancelTask?: () => void;
   recipient?: RecipientProfile;
@@ -34,6 +36,7 @@ export function OverviewTab({
   agentPaused,
   loading,
   activeTask,
+  activeTool,
   onRunTask,
   onCancelTask,
   recipient,
@@ -162,9 +165,13 @@ export function OverviewTab({
           />
         </div>
         {loading && (
-          <div className="mt-4 flex items-center gap-3 text-sm text-sky-600">
+          <div className="mt-4 flex items-center gap-3 text-sm text-sky-600" aria-live="polite">
             <div className="w-4 h-4 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
-            {t.tasks.working}
+            {/* #1253: name the in-flight tool when the agent state has one,
+                fall back to the generic message otherwise. */}
+            {activeTool
+              ? t.tasks.workingStep.replace("{step}", activeTool)
+              : t.tasks.working}
             {onCancelTask && (
               <button
                 onClick={onCancelTask}

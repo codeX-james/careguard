@@ -44,7 +44,7 @@ import {
   payForMedication,
   payBill,
 } from "./tools.ts";
-import { getPendingAdherences } from "../shared/adherence.ts";
+import { getPendingAdherences, skipAdherence } from "../shared/adherence.ts";
 import { notify } from "../shared/notifications.ts";
 import { resolveStellarNetwork, validateSignerKeyForNetwork } from "../shared/stellar-network.ts";
 import { verifyWebhook } from "../shared/verify-webhook.ts";
@@ -394,6 +394,9 @@ app.post("/agent/run", async (req, res) => {
       llmMaxTokensSummary: LLM_MAX_TOKENS_SUMMARY,
       llmContextWindow: parseInt(process.env.LLM_CONTEXT_WINDOW || "32768", 10),
       piiScrub: _piiScrub,
+      // #1253: surface the in-flight tool so the dashboard's loading state can
+      // show which step of a multi-tool-call task is running.
+      onProgress: (progress) => broadcastSSE("run_progress", progress),
     }));
     agentRunsTotal.inc({ status: "success" });
     logger.info({ toolCalls: result.toolCalls.length, truncated: result.truncated, promptTokens: result.llmUsage.promptTokens, completionTokens: result.llmUsage.completionTokens }, "agent task complete");
@@ -564,6 +567,15 @@ app.post("/agent/adherence/confirm", (req, res) => {
   if (!record_id) return res.status(400).json({ error: "record_id is required" });
   const success = confirmAdherenceReminder(record_id);
   res.json({ success: success.success });
+});
+
+// #1254: the OverviewTab adherence check's "Not Yet" — marks the most recent
+// pending dose as skipped so persistent skips can escalate to flagged.
+app.post("/agent/adherence/skip", (req, res) => {
+  const { record_id } = req.body ?? {};
+  if (!record_id) return res.status(400).json({ error: "record_id is required" });
+  const success = skipAdherence(record_id);
+  res.json({ success });
 });
 
 // --- Dispute letter endpoint (#266) ---
