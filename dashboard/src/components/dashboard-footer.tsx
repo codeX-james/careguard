@@ -25,7 +25,9 @@ export function DashboardFooter({ agentWallet, locale = "en" }: DashboardFooterP
               {t.wallet.viewExplorer}
             </a>
           )}
-          <span>{t.app.title} Agent 2026</span>
+          <span suppressHydrationWarning>
+            {t.app.title} Agent {new Date().getFullYear()}
+          </span>
         </div>
       </div>
     </footer>
