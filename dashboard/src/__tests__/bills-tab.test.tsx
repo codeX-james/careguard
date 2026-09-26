@@ -179,3 +179,29 @@ describe("BillsTab — recommendation callout (Issue #1255)", () => {
     expect(callout.textContent).toContain(longText);
   });
 });
+
+describe("BillsTab — dispute generation feedback (Issue #1256)", () => {
+  it("shows a spinner during generation and toasts when the download starts", async () => {
+    const user = userEvent.setup();
+    let resolveDownload: () => void = () => {};
+    downloadDisputeLetterPDF.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveDownload = resolve; }),
+    );
+
+    render(<BillsTab agentResult={buildAgentResult()} recipient={recipient} />);
+    const disputeBtn = screen.getByRole("button", { name: /dispute/i });
+    await user.click(disputeBtn);
+
+    // Spinner + Generating... label while the PDF builds.
+    const generating = screen.getByRole("button", { name: /generating/i });
+    expect(generating).toBeDisabled();
+    expect(generating.querySelector(".animate-spin")).not.toBeNull();
+
+    resolveDownload();
+
+    // Button returns to its normal label promptly after completion.
+    await screen.findByRole("button", { name: /^Dispute$/i });
+    expect(screen.getByRole("button", { name: /^Dispute$/i })).not.toBeDisabled();
+    expect(toastSuccess).toHaveBeenCalledWith("Dispute letter PDF downloaded");
+  });
+});

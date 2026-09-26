@@ -51,6 +51,7 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
         generatedAt: new Date().toISOString(),
       };
       downloadDisputeLetterPDF(letter);
+      toast.success("Dispute letter PDF downloaded");
     } finally {
       setGeneratingDispute(null);
     }
@@ -124,7 +125,17 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
                         disabled={generatingDispute === auditCallKey(tc)}
                         className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 active:bg-red-200 cursor-pointer transition-all disabled:opacity-50"
                       >
-                        {generatingDispute === auditCallKey(tc) ? "Generating..." : "Dispute"}
+                        {generatingDispute === auditCallKey(tc) ? (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"
+                      />
+                      Generating...
+                    </>
+                  ) : (
+                    "Dispute"
+                  )}
                       </button>
                       <button
                         onClick={() => handleDisputeEmail(tc.result)}
