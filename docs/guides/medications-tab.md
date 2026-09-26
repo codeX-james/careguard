@@ -35,6 +35,8 @@ In the current version of CareGuard, the medication list is a fixed starter set 
 
 ## Reading the pharmacy comparison results
 
+For details about how ZIP codes, ranking, savings, and current price coverage work, see [Pharmacy Price Comparisons Explained](pharmacy-comparison-explained.md).
+
 When a comparison has run for a medication, the row shows something like:
 
 > **Lisinopril** — Best: CVS Pharmacy at $4.25
