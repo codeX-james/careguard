@@ -50,7 +50,9 @@
     "seed:recipients": "node --import tsx scripts/seed-recipients.ts",
     "seed:orders": "node --import tsx scripts/seed-orders.ts",
     "seed:adherence": "node --import tsx scripts/seed-adherence.ts",
-    "reset:data": "node --import tsx scripts/reset-local-data.ts"
+    "reset:data": "node --import tsx scripts/reset-local-data.ts",
+    "docker:down:clean": "node --import tsx scripts/docker-teardown.ts",
+    "inspect:pharmacy-db": "node --import tsx scripts/inspect-pharmacy-db.ts"
   },
   "keywords": [],
   "author": "",
