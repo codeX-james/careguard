@@ -77,7 +77,7 @@ export function WalletTab({
           {walletBalanceState === 'error' && (
             <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200 col-span-2">
               <div className="text-sm font-medium text-red-700 mb-2">
-                {walletBalanceError || t.common.error}
+                {walletBalanceError || t.wallet.balanceUnavailable}
               </div>
               {onRetryWalletBalance && (
                 <button

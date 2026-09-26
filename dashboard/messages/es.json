@@ -39,6 +39,10 @@
     "medications": "Medicamentos",
     "medicalBills": "Facturas Médicas"
   },
+  "policyPreview": {
+    "title": "Vista previa del presupuesto",
+    "unsaved": "Sin guardar"
+  },
   "tasks": {
     "comparePrices": "Comparar Precios de Medicamentos",
     "findCheapest": "Encontrar farmacias más económicas para los 4 medicamentos de Rosa",
@@ -47,7 +51,8 @@
     "overBudget": "Intentar Pago Excedente",
     "demoPayment": "Demo: agente intenta $600 (sobre límite de $500)",
     "agentPaused": "Agente pausado",
-    "working": "Agente trabajando..."
+    "working": "Agente trabajando...",
+    "workingStep": "Agente trabajando — ejecutando {step}..."
   },
   "medications": {
     "title": "Medicamentos de Rosa",
@@ -68,6 +73,8 @@
     "lineItems": "líneas",
     "showErrors": "Mostrar solo errores",
     "showAll": "Mostrar todo",
+    "sortByOvercharge": "Ordenar por sobrecargo",
+    "sortDefault": "Orden predeterminado",
     "notAudited": "No hay facturas auditadas. Ejecute \"Auditar Factura\" desde Resumen."
   },
   "policy": {
@@ -111,7 +118,8 @@
     "networkStellar": "Stellar Testnet",
     "viewExplorer": "Ver en Stellar Explorer",
     "fund": "Recargar con USDC",
-    "howPayments": "Cómo Funcionan los Pagos"
+    "howPayments": "Cómo Funcionan los Pagos",
+    "balanceUnavailable": "No se pudo cargar el saldo. Verifique su conexión o que la billetera del agente esté configurada, luego intente de nuevo."
   },
   "settings": {
     "recipient": "Paciente",

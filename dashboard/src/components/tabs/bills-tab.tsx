@@ -8,7 +8,7 @@ import {
   type RecipientProfile,
   type DisputeLetter,
 } from "../../lib/types";
-import { BillLineItemsVirtualized } from "../primitives/bill-line-items-virtualized";
+import { BillLineItemsVirtualized, type BillLineItem } from "../primitives/bill-line-items-virtualized";
 import type { AgentResult } from "../types";
 import { getTranslations, type Locale } from "../../i18n";
 
@@ -20,8 +20,14 @@ export interface BillsTabProps {
 
 export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProps) {
   const [showErrorsOnly, setShowErrorsOnly] = useState(false);
+  const [sortByOvercharge, setSortByOvercharge] = useState(false);
   const [generatingDispute, setGeneratingDispute] = useState<string | null>(null);
   const b = getTranslations(locale).bills;
+
+  const overchargeAmount = (item: BillLineItem) =>
+    item.status !== "valid" && item.suggestedAmount !== undefined
+      ? item.chargedAmount - item.suggestedAmount
+      : 0;
 
   const auditCalls = agentResult?.toolCalls.filter(
     (t) =>
@@ -45,6 +51,7 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
         generatedAt: new Date().toISOString(),
       };
       downloadDisputeLetterPDF(letter);
+      toast.success("Dispute letter PDF downloaded");
     } finally {
       setGeneratingDispute(null);
     }
@@ -76,99 +83,137 @@ export function BillsTab({ agentResult, recipient, locale = "en" }: BillsTabProp
       className="space-y-6"
     >
       {auditCalls && auditCalls.length > 0 ? (
-        auditCalls.map((tc) => (
-          <div
-            // The tool-call ID (or legacy payload composite) stays stable across list reordering.
-            key={auditCallKey(tc)}
-            className="bg-white rounded-xl border border-slate-200 p-6"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-700">
-                {b.title}
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    try {
-                      downloadBillAuditPDF(BillAuditResultSchema.parse(tc.result), {
-                        errorsOnly: showErrorsOnly,
-                        recipient,
-                      });
-                    } catch {
-                      toast.error("Couldn't parse bill audit result — try again");
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-lg text-xs font-medium hover:bg-sky-100 active:bg-sky-200 cursor-pointer transition-all"
+        auditCalls.map((tc) => {
+          const visibleLineItems = tc.result.lineItems.filter(
+            (item: any) => !showErrorsOnly || item.status !== "valid",
+          );
+          const sortedLineItems = sortByOvercharge
+            ? [...visibleLineItems].sort(
+                (a: BillLineItem, b: BillLineItem) => overchargeAmount(b) - overchargeAmount(a),
+              )
+            : visibleLineItems;
+          return (
+            <div
+              // The tool-call ID (or legacy payload composite) stays stable across list reordering.
+              key={auditCallKey(tc)}
+              className="bg-white rounded-xl border border-slate-200 p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-slate-700">
+                  {b.title}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      try {
+                        downloadBillAuditPDF(BillAuditResultSchema.parse(tc.result), {
+                          errorsOnly: showErrorsOnly,
+                          recipient,
+                        });
+                      } catch {
+                        toast.error("Couldn't parse bill audit result — try again");
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-sky-50 text-sky-700 rounded-lg text-xs font-medium hover:bg-sky-100 active:bg-sky-200 cursor-pointer transition-all"
+                  >
+                    {b.downloadPdf}
+                  </button>
+                  {tc.result.errorCount > 0 && (
+                    <>
+                      <button
+                        onClick={() => handleDispute(tc.result, auditCallKey(tc))}
+                        disabled={generatingDispute === auditCallKey(tc)}
+                        className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 active:bg-red-200 cursor-pointer transition-all disabled:opacity-50"
+                      >
+                        {generatingDispute === auditCallKey(tc) ? (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="inline-block w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"
+                      />
+                      Generating...
+                    </>
+                  ) : (
+                    "Dispute"
+                  )}
+                      </button>
+                      <button
+                        onClick={() => handleDisputeEmail(tc.result)}
+                        className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 active:bg-amber-200 cursor-pointer transition-all"
+                      >
+                        Email Text
+                      </button>
+                    </>
+                  )}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium ${tc.result.errorCount > 0
+                      ? "bg-red-100 text-red-700"
+                      : "bg-green-100 text-green-700"
+                      }`}
+                  >
+                    {tc.result.errorCount} {b.errorsFound}
+                  </span>
+                </div>
+              </div>
+              {/* #1255: the recommendation is the actionable takeaway — give
+                  it top billing in an advisory callout, detail below. */}
+              {tc.result.recommendation?.trim() ? (
+                <div
+                  role="note"
+                  aria-label="Audit recommendation"
+                  className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4"
                 >
-                  {b.downloadPdf}
-                </button>
-                {tc.result.errorCount > 0 && (
-                  <>
-                    <button
-                      onClick={() => handleDispute(tc.result, auditCallKey(tc))}
-                      disabled={generatingDispute === auditCallKey(tc)}
-                      className="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 active:bg-red-200 cursor-pointer transition-all disabled:opacity-50"
-                    >
-                      {generatingDispute === auditCallKey(tc) ? "Generating..." : "Dispute"}
-                    </button>
-                    <button
-                      onClick={() => handleDisputeEmail(tc.result)}
-                      className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 active:bg-amber-200 cursor-pointer transition-all"
-                    >
-                      Email Text
-                    </button>
-                  </>
-                )}
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${tc.result.errorCount > 0
-                    ? "bg-red-100 text-red-700"
-                    : "bg-green-100 text-green-700"
-                    }`}
-                >
-                  {tc.result.errorCount} {b.errorsFound}
+                  <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide mb-1">
+                    Recommendation
+                  </p>
+                  <p className="text-sm font-medium text-amber-900 break-words">
+                    {tc.result.recommendation}
+                  </p>
+                </div>
+              ) : null}
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold">${tc.result.totalCharged}</div>
+                  <div className="text-xs text-slate-500">{b.totalCharged}</div>
+                </div>
+                <div className="bg-red-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-red-600">
+                    ${tc.result.totalOvercharge}
+                  </div>
+                  <div className="text-xs text-slate-500">{b.overcharges}</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <div className="text-lg font-bold text-green-600">
+                    ${tc.result.totalCorrect}
+                  </div>
+                  <div className="text-xs text-slate-500">{b.correctAmount}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-500">
+                  {tc.result.lineItems.length} {b.lineItems}
                 </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-slate-50 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold">${tc.result.totalCharged}</div>
-                <div className="text-xs text-slate-500">{b.totalCharged}</div>
-              </div>
-              <div className="bg-red-50 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-red-600">
-                  ${tc.result.totalOvercharge}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSortByOvercharge(!sortByOvercharge)}
+                    aria-pressed={sortByOvercharge}
+                    className="text-xs text-sky-600 hover:text-sky-800 cursor-pointer"
+                  >
+                    {sortByOvercharge ? b.sortDefault : b.sortByOvercharge}
+                  </button>
+                  <button
+                    onClick={() => setShowErrorsOnly(!showErrorsOnly)}
+                    aria-pressed={showErrorsOnly}
+                    className="text-xs text-sky-600 hover:text-sky-800 cursor-pointer"
+                  >
+                    {showErrorsOnly ? b.showAll : b.showErrors}
+                  </button>
                 </div>
-                <div className="text-xs text-slate-500">{b.overcharges}</div>
               </div>
-              <div className="bg-green-50 rounded-lg p-3 text-center">
-                <div className="text-lg font-bold text-green-600">
-                  ${tc.result.totalCorrect}
-                </div>
-                <div className="text-xs text-slate-500">{b.correctAmount}</div>
-              </div>
+              <BillLineItemsVirtualized lineItems={sortedLineItems} />
             </div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500">
-                {tc.result.lineItems.length} {b.lineItems}
-              </span>
-              <button
-                onClick={() => setShowErrorsOnly(!showErrorsOnly)}
-                aria-pressed={showErrorsOnly}
-                className="text-xs text-sky-600 hover:text-sky-800 cursor-pointer"
-              >
-                {showErrorsOnly ? b.showAll : b.showErrors}
-              </button>
-            </div>
-            <BillLineItemsVirtualized
-              lineItems={tc.result.lineItems.filter(
-                (item: any) => !showErrorsOnly || item.status !== "valid",
-              )}
-            />
-            <p className="mt-4 text-sm font-medium text-slate-700">
-              {tc.result.recommendation}
-            </p>
-          </div>
-        ))
+          );
+        })
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-sm text-slate-400">
           {b.notAudited}

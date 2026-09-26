@@ -87,7 +87,7 @@ export default function Dashboard() {
           className="mx-auto max-w-7xl px-4 pt-4"
         >
           <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-sm text-yellow-800">
-            The last agent task was truncated — the result may be incomplete. Consider re-running with a more focused request.
+            The last agent task was truncated — the result may be incomplete. Try running the task again from Overview.
           </div>
         </div>
       )}
@@ -108,7 +108,7 @@ export default function Dashboard() {
         recipientsError={recipientsError}
       />
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <DashboardTabsNav activeTab={activeTab} pathname={pathname} locale={locale} />
+        <DashboardTabsNav activeTab={activeTab} pathname={pathname} approvalsCount={state.approvals.length} locale={locale} />
         {activeTab === "overview" && (
           <OverviewTab
             spending={state.spending}
@@ -116,6 +116,7 @@ export default function Dashboard() {
             agentPaused={state.agentPaused}
             loading={state.loading}
             activeTask={state.activeTask}
+            activeTool={state.activeTool}
             onRunTask={state.runAgentTask}
             onCancelTask={state.cancelAgentTask}
             recipient={recipient}

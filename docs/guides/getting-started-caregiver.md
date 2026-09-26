@@ -52,13 +52,13 @@ Go to the **Policy tab** to configure how much the agent can spend.
 
 The key settings are:
 
-| Setting | What it means |
-|---|---|
-| Daily Spending Limit ($) | Maximum the agent can spend in one day |
-| Monthly Spending Limit ($) | Maximum the agent can spend in a month |
-| Medication Monthly Budget ($) | Maximum the agent can spend on medications in a month |
-| Bill Monthly Budget ($) | Maximum the agent can spend on medical bills in a month |
-| Caregiver Approval Threshold ($) | Payments above this amount need your approval |
+| Setting                          | What it means                                           |
+| -------------------------------- | ------------------------------------------------------- |
+| Daily Spending Limit ($)         | Maximum the agent can spend in one day                  |
+| Monthly Spending Limit ($)       | Maximum the agent can spend in a month                  |
+| Medication Monthly Budget ($)    | Maximum the agent can spend on medications in a month   |
+| Bill Monthly Budget ($)          | Maximum the agent can spend on medical bills in a month |
+| Caregiver Approval Threshold ($) | Payments above this amount need your approval           |
 
 For a detailed walkthrough of each setting, see [Spending Policy for Caregivers](spending-policy-for-caregivers.md).
 
@@ -124,6 +124,10 @@ The agent does not make any payments without your knowledge. If a payment requir
 
 ## Need help?
 
+- [Caregiver Onboarding Checklist](onboarding-checklist.md) — setup steps in order, with required and optional items
+- [What the Agent Can Do](what-the-agent-can-do.md) — the agent's capabilities, payment safeguards, and limits
+- [Drug Interaction Alerts](drug-interaction-alerts.md) — where to find a warning and what to do next
+- [Approval Threshold](approval-threshold.md) — how the threshold and approval countdown work
 - [Glossary](glossary.md) — plain-language definitions of x402, USDC, testnet, spending policy, and other terms
 - [Spending Policy for Caregivers](spending-policy-for-caregivers.md) — understanding the Policy tab
 - [Category Budget Examples](category-budgets-examples.md) — worked examples of budget configurations

@@ -4,25 +4,42 @@ info:
   version: '1.0.0'
   description: 'OpenAPI spec for CareGuard services: agent spending, pharmacy, bill audit, drug interactions, and payments. For a consolidated reference of error JSON shapes, status codes, and retry guidance, see docs/api-examples/error-responses.md.'
   description: 'OpenAPI spec for CareGuard services: agent spending, pharmacy, bill audit, drug interactions, and payments. See docs/api-examples/rate-limits.md for rate-limit behavior, response headers, and retry guidance.'
+  externalDocs:
+    description: 'Authentication schemes and endpoint requirements'
+    url: 'api-examples/authentication.md'
 servers:
   - url: 'http://localhost:3000'
     description: 'Development server'
   - url: 'https://api.careguard.xyz'
     description: 'Production server'
-security:
-  - CaregiverBearerAuth: []
+security: []
 components:
   securitySchemes:
     CaregiverBearerAuth:
       type: 'http'
       scheme: 'bearer'
       bearerFormat: 'token'
-      description: 'Bearer token used to authorize caregiver access to /agent/* endpoints. Set CAREGIVER_TOKEN in environment variables.'
+      description: 'Caregiver token used by GET and POST /recipients. Set CAREGIVER_TOKEN in the server environment; this is separate from AGENT_API_KEY and x402 payment.'
+    AgentApiKeyAuth:
+      type: 'http'
+      scheme: 'bearer'
+      bearerFormat: 'token'
+      description: 'Bearer API key for /agent/* routes. Set AGENT_API_KEY in the server environment.'
+    PharmacyAdminAuth:
+      type: 'http'
+      scheme: 'bearer'
+      bearerFormat: 'token'
+      description: 'Bearer admin token for pharmacy administration routes. Set PHARMACY_ADMIN_TOKEN in the server environment.'
     X402Auth:
       type: 'apiKey'
       name: 'X-Payment'
       in: 'header'
       description: 'x402 payment proof header for paid endpoints on Stellar.'
+    MPPPaymentAuth:
+      type: 'apiKey'
+      name: 'X-Payment-Authorization'
+      in: 'header'
+      description: 'MPP payment authorization for POST /pharmacy/order; distinct from x402.'
   schemas:
     Error:
       type: 'object'
@@ -162,6 +179,8 @@ paths:
       summary: 'Get agent spending summary. See docs/api-examples/agent-spending.md for a full field reference and sample response.'
       tags:
         - 'Agent'
+      security:
+        - AgentApiKeyAuth: []
       responses:
         200:
           description: 'Spending summary'
@@ -274,6 +293,8 @@ paths:
       description: 'Admin-only endpoint to create or update a drug price at a pharmacy. See docs/api-examples/pharmacy-prices-admin.md for detailed authorization rules, sample payloads, and effects on future comparison results.'
       tags:
         - 'Pharmacy'
+      security:
+        - PharmacyAdminAuth: []
       requestBody:
         required: true
         content:
@@ -440,6 +461,8 @@ paths:
       description: 'Submits a medication order and pays via MPP Charge on Stellar (X-Payment-Challenge / X-Payment-Authorization headers), distinct from the x402 flow used by other endpoints. See docs/api-examples/pharmacy-order.md for a full walkthrough and docs/services/mpp.md for persistence internals.'
       tags:
         - 'Pharmacy Payments'
+      security:
+        - MPPPaymentAuth: []
       requestBody:
         required: true
         content:
@@ -498,11 +521,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /recipients:
+    get:
+      summary: 'List care recipients'
+      tags:
+        - 'Care Recipients'
+      security:
+        - CaregiverBearerAuth: []
+      responses:
+        200:
+          description: 'Care recipient list'
+        401:
+          description: 'Missing caregiver token'
+        403:
+          description: 'Invalid caregiver token'
+    post:
+      summary: 'Create a care recipient'
+      tags:
+        - 'Care Recipients'
+      security:
+        - CaregiverBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: 'object'
+              required:
+                - 'name'
+              properties:
+                name:
+                  type: 'string'
+                age:
+                  type: 'integer'
+                medications:
+                  type: 'array'
+                  items:
+                    type: 'string'
+                primary_doctor:
+                  type: 'string'
+                insurance:
+                  type: 'string'
+      responses:
+        201:
+          description: 'Care recipient created'
+        400:
+          description: 'Invalid care recipient request'
+        401:
+          description: 'Missing caregiver token'
+        403:
+          description: 'Invalid caregiver token'
   /docs:
     get:
       summary: 'API documentation UI'
       tags:
         - 'Documentation'
+      security: []
       responses:
         200:
           description: 'Scalar UI serving this OpenAPI spec'
