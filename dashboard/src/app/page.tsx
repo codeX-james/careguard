@@ -87,7 +87,7 @@ export default function Dashboard() {
           className="mx-auto max-w-7xl px-4 pt-4"
         >
           <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-sm text-yellow-800">
-            The last agent task was truncated — the result may be incomplete. Consider re-running with a more focused request.
+            The last agent task was truncated — the result may be incomplete. Try running the task again from Overview.
           </div>
         </div>
       )}
